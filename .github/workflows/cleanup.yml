@@ -1,0 +1,46 @@
+name: Auto Cleanup Files and History
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository with History
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Git Config
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Delete Files Older Than 3 Minutes
+        run: |
+          now=$(date +%s)
+          git ls-files | while read -r file; do
+            if [[ "$file" == .github/* ]]; then
+              continue
+            fi
+            commit_time=$(git log -1 --format="%ct" -- "$file")
+            if [ -n "$commit_time" ]; then
+              age=$(( now - commit_time ))
+              if [ $age -ge 120 ]; then
+                echo "Deleting: $file (Age: $age seconds)"
+                git rm -f "$file"
+              fi
+            fi
+          done
+
+      - name: Commit and Push
+        run: |
+          git commit -m "Auto cleaned files older than 3 minutes" || exit 0
+          for i in 1 2 3; do
+            git pull --rebase origin master && git push origin master && break
+            sleep 2
+          done
