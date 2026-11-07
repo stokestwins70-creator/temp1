@@ -1,0 +1,44 @@
+name: Reset and Wipe Commits History
+
+on:
+  
+  schedule:
+    - cron: '0 0 * * *'  # প্রতিদিন রাত ১২টায়
+ 
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  wipe-history:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Current Files
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1  
+
+      - name: Setup Git Identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Wipe All Old Commits
+        run: |
+    
+          BRANCH="${{ github.ref_name }}"
+
+ 
+          git checkout --orphan fresh_branch
+
+       
+          git add -A
+          git commit -m "Fresh clean commit - history wiped"
+
+   
+          git branch -D "$BRANCH"
+          git branch -m "$BRANCH"
+
+         
+          git push -f origin "$BRANCH"
